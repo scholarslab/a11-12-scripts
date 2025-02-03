@@ -1,1 +1,1 @@
-# a11-12-scripts
+# Scripts to support the A11/12 twitter archive project
