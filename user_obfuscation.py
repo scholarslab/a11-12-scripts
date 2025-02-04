@@ -1,33 +1,45 @@
 """
-A proof of concept script to demonstrate Twitter user ID obfuscation.
+A proof of concept script to demonstrate Twitter user ID
+pseudonymization.
 
 The problem is that we want to make it harder to match twitter IDs and
-screennames to tweet texts, but still convey authorship information
-across the corpus.
+screennames to collected tweet texts, but still convey authorship
+information across the corpus.
 
-To perform this obfuscation, we take a hash (SHA3-224) of each UTF-8
-encoded user ID and then use the first 60 bits to look up 4 words in
-the EFF Diceware long word list.
+To perform this pseudonymization, we take a hash (SHA3-224) of each
+UTF-8 encoded user ID and then use the first 60 bits to look up 5 words
+in the EFF Diceware long word list to serve as a pseudonym.
 
 The odds of a hash collision can be approximated by:
 P≈1-e^(-(n^2/2H)) 
 (per https://en.wikipedia.org/wiki/Birthday_problem#Approximations)
 
 The charlottesville_2017_0814.json dataset contains 4735052 tweets and
-1700875 unique users. 
+1700875 unique authors. 
 
-Conservatively rounding the number of users up to 2 million across all
-A11/12 datasets, this means there is a roughly 1 in 5780 chance of any
-collision and roughly 1 in 576 billion chance that any given user ID
-will have a doppelganger.
+Conservatively rounding the number of authors up to 2 million across
+all A11/12 datasets, this means there is a roughly 1 in 5780 chance of
+any collision and roughly 1 in 576 billion chance that any given user
+ID will have a doppelganger. Increasing the obfuscated name to 6 words
+(72 bits) decreases the collision chance to 1 in 23 million while
+reducing the name to 4 words (48 bits) increases it to 1 in 141.
 
-SHA3 is a crytographic hash, so knowing what how we do all of this
-doesn't allow this process to be reversed. However, although SHA3 is
+SHA3 is a crytographic hash, so knowing how we do all of this doesn't
+in itself allow this process to be reversed. However, although SHA3 is
 a relatively slow hash algorithm, the total number of twitter user ids
-can be hashed in less than a minute.
+is fairly small and can be hashed in less than a minute.
 
-We can either add a cryptographic salt of sufficient length and/or a
-secret cryptographic pepper to to slow down hash precomputation. 
+To mitigate this kind of distributed attack, we can either add a
+cryptographic salt of sufficient length and/or a secret cryptographic
+pepper to to slow down hash precomputation. 
+
+Of course none of this is really secure - the original tweets are
+largely extant on the live Twitter service, so it would be trivial to
+find a different tweet from the same user and then map it to the user
+through Twitter's (rather bad) search. Obfuscating usernames will
+still allow deleted accounts to remain pseudonymous and at least slows
+down the identification process for others.
+
 """
 
 # Import Python's json module
@@ -66,7 +78,7 @@ obufscated_users  = {}
 for id in user_ids:
     hex = hashlib.sha3_224((PEPPER+str(id)).encode('utf-8')).hexdigest()
     hashes = []
-    for i in range(4):
+    for i in range(5):
         hashes.append(hex[3*i:3*(i+1)])
     dicewords = []
     for hash in hashes:
