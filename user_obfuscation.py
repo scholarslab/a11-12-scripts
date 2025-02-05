@@ -3,9 +3,9 @@ A proof of concept script to demonstrate Twitter user ID
 pseudonymization.
 
 The problem is that we want to make it harder to match twitter IDs and
-screennames to collected tweet texts, but still convey authorship
+screenn ames to collected tweet texts, but still convey authorship
 information across the corpus. Replacing the user id and screen name
-with a consistent and unique pseudonym is a reasonable solution.
+with a consistent and unique pseudonym is a potential solution to this.
 
 Ideally, a pseudonym should be legible at a glance and not too long in
 length.  In this pseudonymization example, we take a hash (SHA3-224) of
@@ -13,8 +13,8 @@ each UTF-8 encoded user ID and then use the first 36 bits to look up 3
 words in the EFF Diceware long word list.
 
 One immediate problem with this approach is that we need a low
-probability of a hash collision, which would cause two users to share
-the same pseudonym. 
+probability of hash collisions, which would cause multiple users to
+share the same pseudonym. 
 
 The odds of a hash collision can be approximated by:
 P≈1-e^(-(n^2/2H)) 
@@ -26,8 +26,8 @@ to 2 million across all A11/12 datasets, using only three words
 virtually guarantees a collision somewhere in the dataset even if the
 probability that any given user has a doppelganger is relatively low.
 
-Increasing the pseudonym to 6 words (72 bits) decreases the collision
-chance to 1 in 23 million, but a 6-word pseudonym is pretty unwieldy.
+Increasing the pseudonym to 5 words (60 bits) decreases the collision
+chance to 1 in 500K, but a 5-word pseudonym is a little unwieldy.
 We can also increase the size of the word list to buy more entropy, but
 the nice thing about the EFF diceware list is that it's been sanitized
 of problematic words (insults, profanity, slurs, and words evocative of
@@ -39,7 +39,7 @@ postfix to serve as a sort of checksum.
 Using a base 33 alphabet (3-Z, since 0,1, and 2 all have similar-looking 
 letters), we can form a 5-character postfix using the next 25 bits of
 the hash. With 61 bits of entropy, the overall chance of a hash
-collision in our user set is reduced to under 1 in 11000.
+collision in our user set is reduced to under 1 in 1.1 million.
 
 Each pseudonym would be something in this general format:
 @exceeding-cut-fascism-E5FQP
