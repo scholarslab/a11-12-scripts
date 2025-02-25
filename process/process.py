@@ -1,6 +1,28 @@
+"""
+Display processing logic
+
+This file contains the logic to transform Twitter
+API dump jsonl files (typically saved as .json files)
+into our archival display files, stripping out
+deprecated, extraneous, and redundant data.
+
+Input filenames go into the DATA_FILES list. Output
+appears in the output directory.
+
+Output separates tweet and user data to save space.
+
+Performance seems good enough for our purposes
+(6 seconds for 100k tweets).
+
+"""
+
 import json
 
-display_tweets = []
+
+DATA_FILES = [
+    "charlottesville_0010.json",
+    "charlottesville_0100000.json"
+]
 
 """
 Twitter API object documentation:
@@ -59,16 +81,11 @@ Notes:
     to strip out url shortening, obfuscate users, etc.
 2. retweeted_status has the original tweet, which contains some
     of the display values (favorites count, etc) used on the
-    Twitter front end. We might need to extract those values
-    from there, depending on how we decide to handle RTs.
+    Twitter front end. We might want to use some of those
+    values, depending on how we decide to handle RTs.
 """
 
-data_files = [
-    "charlottesville_0010.json",
-    "charlottesville_0100000.json"
-]
-
-for filename in data_files:
+for filename in DATA_FILES:
     with open("./data/"+filename,"r",-1,"UTF-8") as infile:
         display_tweets = []
         display_users = {}
