@@ -25,7 +25,7 @@ DATA_FILES = [
     "charlottesville_20170814.json"
 ]
 
-BOX_SIZE = 1000000
+BOX_SIZE = 50000
 
 """
 Twitter API object documentation:
@@ -55,7 +55,7 @@ TWEET_SCHEMA = {
     "retweet_count":["retweet_count"],
     "created_at":["created_at"],
     "user_id":["user","id_str"],
-    "user_screen_name":["user","screen_name"] # duplicated for lookup convenience
+    "user_screen_name":["user","screen_name"], # duplicated for lookup convenience
 }
 
 USER_SCHEMA = {
@@ -118,8 +118,16 @@ for filename in DATA_FILES:
                     display_tweet["retweeted_status"][target] = parse_schema(source,tweet["retweeted_status"])
             else:
                 display_tweet["retweeted_status"] = None
+
+            # special hashtag processing
+            display_hashtags = set()
+            for hashtag in tweet["entities"]["hashtags"]:
+                display_hashtags.add(hashtag["text"].lower())
+            display_tweet["hashtags"] = list(display_hashtags)
+
             display_tweets_box[tweet["id"]] = display_tweet
             display_tweet_ids.append(tweet["id"])
+
             # user processing
             for user in users:
                 display_user = {}
@@ -142,10 +150,11 @@ for filename in DATA_FILES:
                 # users_fn = "disp_users_"+"".join(filename.split(".")[:-1])+"-"+str(file_count).zfill(3)+".json"
                 # with open("./output/"+users_fn, "w", encoding="UTF-8") as outfile:
                 #     json.dump(display_users,outfile)
+                
                 file_count+=1
-                # if file_count>1:
+
+                # if file_count>5:
                 #     break
-                # exit()
     
     print(filename,": Writing file",file_count)
 
