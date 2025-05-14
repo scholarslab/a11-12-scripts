@@ -25,7 +25,7 @@ DATA_FILES = [
     "charlottesville_20170814.json"
 ]
 
-BOX_SIZE = 50000
+BOX_SIZE = 10000
 
 """
 Twitter API object documentation:
@@ -99,10 +99,10 @@ Notes:
 """
 display_tweets = {}
 display_users = {}
-display_tweet_ids = []
 display_tweet_id_dict = {}
 for filename in DATA_FILES:
     with open("./data/"+filename,"r",-1,"UTF-8") as infile:
+        display_tweet_box_ids = []
         display_tweets_box = {}
         file_count = 0
         for line in infile:
@@ -126,7 +126,7 @@ for filename in DATA_FILES:
             display_tweet["hashtags"] = list(display_hashtags)
 
             display_tweets_box[tweet["id"]] = display_tweet
-            display_tweet_ids.append(tweet["id"])
+            display_tweet_box_ids.append(tweet["id"])
 
             # user processing
             for user in users:
@@ -143,9 +143,8 @@ for filename in DATA_FILES:
                 display_tweets.update(display_tweets_box)
                 display_tweets_box = {}
                 
-                with open("./output/disp_twids_"+filename, "w", encoding="UTF-8") as outfile:
-                    display_tweet_id_dict.update({twid: tweets_fn for twid in display_tweet_ids})
-                    json.dump(display_tweet_id_dict,outfile)
+                display_tweet_id_dict.update({twid: tweets_fn for twid in display_tweet_box_ids})
+                display_tweet_box_ids = []
 
                 # users_fn = "disp_users_"+"".join(filename.split(".")[:-1])+"-"+str(file_count).zfill(3)+".json"
                 # with open("./output/"+users_fn, "w", encoding="UTF-8") as outfile:
@@ -153,24 +152,27 @@ for filename in DATA_FILES:
                 
                 file_count+=1
 
-                # if file_count>5:
-                #     break
+                if file_count>=8:
+                    break
     
     print(filename,": Writing file",file_count)
 
     tweets_fn = "disp_tw_"+"".join(filename.split(".")[:-1])+"-"+str(file_count).zfill(3)+".json"
-    with open("./output/"+tweets_fn, "w", encoding="UTF-8") as outfile:
-        json.dump(display_tweets_box,outfile)
-    
-    tweets_fn = "disp_tw_"+"".join(filename.split(".")[:-1])+"-full.json"
-    with open("./output/"+tweets_fn, "w", encoding="UTF-8") as outfile:
-        json.dump(display_tweets,outfile)
-                
+    if len(display_tweets_box)>0:
+        with open("./output/"+tweets_fn, "w", encoding="UTF-8") as outfile:
+            json.dump(display_tweets_box,outfile)
+        
+    display_tweet_id_dict.update({twid: tweets_fn for twid in display_tweet_box_ids})
     with open("./output/disp_twids_"+filename, "w", encoding="UTF-8") as outfile:
-        display_tweet_id_dict.update({twid: tweets_fn for twid in display_tweet_ids})
         json.dump(display_tweet_id_dict,outfile)
 
     users_fn = "disp_users_"+"".join(filename.split(".")[:-1])+".json"
     with open("./output/"+users_fn, "w", encoding="UTF-8") as outfile:
         json.dump(display_users,outfile)
+    
+    # tweets_full_fn = "disp_tw_"+"".join(filename.split(".")[:-1])+"-full.json"
+    # with open("./output/"+tweets_full_fn, "w", encoding="UTF-8") as outfile:
+    #     json.dump(display_tweets,outfile)
+                
+    
     
