@@ -19,6 +19,8 @@ Performance seems good enough for our purposes
 import json
 from collections import defaultdict
 from itertools import islice
+from datetime import datetime
+from collections import Counter
 
 
 DATA_FILES = [
@@ -171,9 +173,11 @@ Notes:
 """
 display_tweets = {}
 display_users = {}
-display_tweet_id_dict = {}
 retweets = defaultdict(str)
 counter = 0
+
+retweets_count = Counter()
+
 for filename in DATA_FILES:
     with open("./data/"+filename,"r",-1,"UTF-8") as infile:
         for line in infile:
@@ -183,7 +187,16 @@ for filename in DATA_FILES:
             # filter out tweets already extracted
             extracted_tweets = {k:v for k,v in extracted_tweets.items() if k not in display_tweets}
             
-            # update main display tweets dictionary with extracted tweets
+                        # convert datetime string to unix epoch
+            for twid,extracted_tweet in extracted_tweets.items():
+                dtstr = extracted_tweet["created_at"]
+                # print(twid)
+                # print(json.dumps(extracted_tweet,indent=2))
+                date_format = "%a %b %d %H:%M:%S %z %Y"
+                dt = datetime.strptime(dtstr, date_format)
+                extracted_tweet["created_at"] = int(dt.timestamp())
+            
+            # update main display tweets dçictionary with extracted tweets
             display_tweets.update(extracted_tweets)
 
             # remove retweets and append info to parent
@@ -192,7 +205,8 @@ for filename in DATA_FILES:
                     parent = display_tweets[extracted_tweet["retweeted_status_id"]]  
                     if "retweets" not in parent:
                         parent["retweets"] = []
-                    parent["retweets"].append((extracted_tweet["user_id"],extracted_tweet["user_screen_name"],extracted_tweet["created_at"]))
+                    # parent["retweets"].append((extracted_tweet["user_id"],extracted_tweet["user_screen_name"],extracted_tweet["created_at"]))
+                    parent["retweets"].append((extracted_tweet["user_id"],extracted_tweet["user_screen_name"]))
                     del display_tweets[extracted_tweet["id"]]
             
             # extract all users
@@ -201,15 +215,23 @@ for filename in DATA_FILES:
             display_users.update(extracted_users)
             
             counter+=1
-            if counter % 10000 == 0:
+            if counter % BOX_SIZE == 0:
                 print("Processing tweet #"+str(counter))
             # if counter > BOX_SIZE*10:
             #     break
+    
+    # for id,tweet in display_tweets.items():
+    #     if "retweets" in tweet:
+    #         retweets_count[tweet["id"]] = len(tweet["retweets"])
+    
+    # for twid,retweet_count in retweets_count.most_common(20):
+    #     print(twid, retweet_count, "retweets")
     
     file_count = 0
     display_twids = {}
     for chunk in chunk_dictionary(display_tweets, BOX_SIZE):
         print("Writing file",str(file_count)+"/"+str(int(len(display_tweets)/BOX_SIZE)))
+        print("  (",len(chunk),"tweets )")
         tweets_fn = "disp_tw_"+"".join(filename.split(".")[:-1])+"-"+str(file_count).zfill(3)+".json"
         with open("./output/"+tweets_fn, "w", encoding="UTF-8") as outfile:
             json.dump(chunk,outfile)
