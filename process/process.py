@@ -27,10 +27,11 @@ DATA_FILES = [
     # "charlottesville_0010.jsonl",
     # "charlottesville_0010000.jsonl"
     # "charlottesville_01000000.jsonl",
-    "charlottesville_20170814.json"
+    # "charlottesville_20170814.json"
+    "cvlf10k.json"
 ]
 
-BOX_SIZE = 10000
+BOX_SIZE = 50000
 
 """
 Twitter API object documentation:
@@ -68,17 +69,17 @@ USER_SCHEMA = {
         "id":["id_str"],
         "verified":["verified"],
         "followers_count":["followers_count"],
-        "statuses_count":["statuses_count"],
+        # "statuses_count":["statuses_count"],
         "description":["description"],
         "friends_count":["friends_count"],
         "location":["location"],
-        "utc_offset":["utc_offset"],
-        "time_zone":["time_zone"],
+        # "utc_offset":["utc_offset"],
+        # "time_zone":["time_zone"],
         "screen_name":["screen_name"],
-        "lang":["lang"], #user interface setting, deprecated in 1.1 but seemingly still available here
+        # "lang":["lang"], #user interface setting, deprecated in 1.1 but seemingly still available here
         "name":["name"],
-        "url":["url"],
-        "created_at":["created_at"]
+        # "url":["url"],
+        # "created_at":["created_at"]
 }
 
 '''
@@ -86,11 +87,11 @@ Follow the schema to extract a single display attribute
 '''
 def parse_attribute(source,twitter_element):
     for i in source:
-        if i in twitter_element and twitter_element[i]:
+        if i in twitter_element:
             twitter_element = twitter_element[i]
         else:
             return None
-    return str(twitter_element)
+    return twitter_element
 
 '''
 follow the schema to extract the attributes for a single display tweet
@@ -98,8 +99,9 @@ follow the schema to extract the attributes for a single display tweet
 def extract_display_tweet(tweet):
     display_tweet = {}
     for target, source in TWEET_SCHEMA.items():
-        if parse_attribute(source,tweet):
-            display_tweet[target] = parse_attribute(source,tweet)
+        att = parse_attribute(source,tweet)
+        if att:
+            display_tweet[target] = att
     return display_tweet
 
 '''
@@ -128,7 +130,9 @@ follow the schema to extract the attributes for a single display tweet
 def extract_display_user(tweet):
     display_user = {}
     for target, source in USER_SCHEMA.items():
-        display_user[target] = parse_attribute(source,tweet["user"])
+        att = parse_attribute(source,tweet["user"])
+        if att:
+            display_user[target] = att
     return display_user
 
 
@@ -245,3 +249,14 @@ for filename in DATA_FILES:
     users_fn = "disp_users_"+"".join(filename.split(".")[:-1])+".json"
     with open("./output/"+users_fn, "w", encoding="UTF-8") as outfile:
         json.dump(display_users,outfile)
+
+    
+
+    print("Writing file sample_tw.json")
+    with open("./sample_tw.json", "w", encoding="UTF-8") as outfile:
+        json.dump(next(iter(display_tweets.items())),outfile)
+    
+    print("Writing file sample_u.json")
+    with open("./sample_u.json", "w", encoding="UTF-8") as outfile:
+        json.dump(next(iter(display_users.items())),outfile)
+    
