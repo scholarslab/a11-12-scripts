@@ -31,7 +31,7 @@ DATA_FILES = [
     "cvlf10k.json"
 ]
 
-BOX_SIZE = 50000
+BOX_SIZE = 500
 
 """
 Twitter API object documentation:
