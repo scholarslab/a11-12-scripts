@@ -30,9 +30,10 @@ DATA_FILES = [
     # "charlottesville_20170814.json"
 ]
 
-BOX_SIZE = 10000
+BOX_SIZE = 2000
 # EDT is UTC-4, EST is UTC-5
 TZ_OFFSET = -4
+OUTPUT_FILENAME = "cville814"
 
 """
 Twitter API object documentation:
@@ -67,6 +68,7 @@ TWEET_SCHEMA = {
     "created_at":["created_at"],
     "user_id":["user","id_str"],
     "user_screen_name":["user","screen_name"], # duplicated for lookup convenience
+    "verified":["user","verified"], # duplicated for lookup convenience
 }
 
 USER_SCHEMA = {
@@ -184,7 +186,7 @@ user/"listed_count" #number of lists user is on
 
 Notes:
 
-1. Entities need  as part of this processing step
+1. Entities need as part of this processing step
     to strip out url shortening, obfuscate users, etc.
 2. retweeted_status has the original tweet, which contains some
     of the display values (favorites count, etc) used on the
@@ -221,8 +223,6 @@ for filename in DATA_FILES:
                 extracted_tweet["local_date"] = local_date_str
                 # extracted_tweet["local_time"] = local_time_str
             
-
-            
             # update main display tweets dictionary with extracted tweets
             display_tweets.update(extracted_tweets)
 
@@ -241,7 +241,7 @@ for filename in DATA_FILES:
             # since we're going backward in time, don't overwrite older data with newer
             users = {k:v for k,v in extracted_users.items() if k not in display_users}
             display_users.update(extracted_users)
-            
+
             counter+=1
             if counter % BOX_SIZE == 0:
                 print("Processing tweet #"+str(counter))
@@ -260,27 +260,38 @@ for filename in DATA_FILES:
     for chunk in chunk_dictionary(display_tweets, BOX_SIZE):
         print("Writing tweet file",str(file_count)+"/"+str(int(len(display_tweets)/BOX_SIZE)))
         print("  (",len(chunk),"tweets )")
-        users_fn = "disp_tw_"+"".join(filename.split(".")[:-1])+"-"+str(file_count).zfill(3)+".json"
-        with open("./output/"+users_fn, "w", encoding="UTF-8") as outfile:
+        tweets_fn = "disp_tw_"+OUTPUT_FILENAME+"-"+str(file_count).zfill(3)+".json"
+        with open("./output/"+tweets_fn, "w", encoding="UTF-8") as outfile:
             json.dump(chunk,outfile)
         for twid,tweet in chunk.items():
-            display_twids[twid] = users_fn
+            display_twids[twid] = tweets_fn
         file_count+=1
+
+    with open("./output/disp_twids_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:
+        json.dump(display_twids,outfile)
+
+    
+    # create sort lists
+    with open("./output/sort_chrono_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:
+        json.dump(sorted(display_tweets.keys()),outfile)
+    with open("./output/sort_favs_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:    
+        json.dump([display_tweet["id"] for display_tweet in sorted(display_tweets.values(), key=lambda t: int(t.get("favorite_count",0)), reverse=True)],outfile)
+    with open("./output/sort_retweets_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:
+        json.dump([display_tweet["id"] for display_tweet in sorted(display_tweets.values(), key=lambda t: int(t.get("retweet_count",0)), reverse=True)],outfile)
+    with open("./output/sort_followers_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:
+        json.dump([display_tweet["id"] for display_tweet in sorted(display_tweets.values(), key=lambda t: int(display_users[t["user_id"]]["followers_count"]), reverse=True)],outfile)
     
     file_count = 0
     display_userids = {}
     for chunk in chunk_dictionary(display_users, BOX_SIZE):
         print("Writing user file",str(file_count)+"/"+str(int(len(display_tweets)/BOX_SIZE)))
         print("  (",len(chunk),"users )")
-        users_fn = "disp_u_"+"".join(filename.split(".")[:-1])+"-"+str(file_count).zfill(3)+".json"
+        users_fn = "disp_u_"+OUTPUT_FILENAME+"-"+str(file_count).zfill(3)+".json"
         with open("./output/"+users_fn, "w", encoding="UTF-8") as outfile:
             json.dump(chunk,outfile)
         for userid,user in chunk.items():
             display_userids[userid] = users_fn
         file_count+=1
             
-    with open("./output/disp_twids_"+filename, "w", encoding="UTF-8") as outfile:
-        json.dump(display_twids,outfile)
-
-    with open("./output/disp_userids_"+filename, "w", encoding="UTF-8") as outfile:
+    with open("./output/disp_userids_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:
         json.dump(display_userids,outfile)
