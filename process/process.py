@@ -19,18 +19,20 @@ Performance seems good enough for our purposes
 import json
 from collections import defaultdict
 from itertools import islice
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from collections import Counter
 
 
 DATA_FILES = [
     # "charlottesville_0010.jsonl",
     # "charlottesville_0010000.jsonl"
-    # "charlottesville_01000000.jsonl",
-    "charlottesville_20170814.json"
+    "charlottesville_01000000.jsonl",
+    # "charlottesville_20170814.json"
 ]
 
 BOX_SIZE = 10000
+# EDT is UTC-4, EST is UTC-5
+TZ_OFFSET = -4
 
 """
 Twitter API object documentation:
@@ -48,6 +50,9 @@ Replies
 RT of replies
 QRT of replies
 """
+
+# maximum number of followers to qualify as small, medium, and large sized accounts
+USER_SIZE_BOUNDS = [1000,100000,1000000]
 
 TWEET_SCHEMA = {
     "text":["text"],
@@ -129,6 +134,21 @@ def extract_display_user(tweet):
     display_user = {}
     for target, source in USER_SCHEMA.items():
         display_user[target] = parse_attribute(source,tweet["user"])
+    # construct search fields (0 is smallest)
+    if not display_user["followers_count"]:
+        display_user["followers_count"] = 0
+    display_user["size"] = len(USER_SIZE_BOUNDS)
+    for size in reversed(range(len(USER_SIZE_BOUNDS))):
+        if int(display_user["followers_count"]) < USER_SIZE_BOUNDS[size]:
+            display_user["size"] = size
+    
+    # created_at fields
+    date_format = "%a %b %d %H:%M:%S %z %Y"
+    created_at = datetime.strptime(display_user["created_at"], date_format)
+    display_user["created_at"] = int(created_at.timestamp())
+
+    local_date_str = created_at.astimezone(timezone(timedelta(hours=TZ_OFFSET))).strftime('%Y-%m-%d')
+    display_user["created_year"] = created_at.strftime('%Y')
     return display_user
 
 
@@ -187,16 +207,23 @@ for filename in DATA_FILES:
             # filter out tweets already extracted
             extracted_tweets = {k:v for k,v in extracted_tweets.items() if k not in display_tweets}
             
-                        # convert datetime string to unix epoch
+            # convert datetime string to unix epoch
             for twid,extracted_tweet in extracted_tweets.items():
                 dtstr = extracted_tweet["created_at"]
                 # print(twid)
                 # print(json.dumps(extracted_tweet,indent=2))
                 date_format = "%a %b %d %H:%M:%S %z %Y"
                 dt = datetime.strptime(dtstr, date_format)
-                extracted_tweet["created_at"] = int(dt.timestamp())
+                local_date_str = dt.astimezone(timezone(timedelta(hours=TZ_OFFSET))).strftime('%Y-%m-%d')
+                # local_time_str = dt.astimezone(timezone(timedelta(hours=TZ_OFFSET))).strftime('%H:%M:%S')
+                timestamp = dt.timestamp()
+                extracted_tweet["created_at"] = int(timestamp)
+                extracted_tweet["local_date"] = local_date_str
+                # extracted_tweet["local_time"] = local_time_str
             
-            # update main display tweets dçictionary with extracted tweets
+
+            
+            # update main display tweets dictionary with extracted tweets
             display_tweets.update(extracted_tweets)
 
             # remove retweets and append info to parent
@@ -205,19 +232,20 @@ for filename in DATA_FILES:
                     parent = display_tweets[extracted_tweet["retweeted_status_id"]]  
                     if "retweets" not in parent:
                         parent["retweets"] = []
-                    # parent["retweets"].append((extracted_tweet["user_id"],extracted_tweet["user_screen_name"],extracted_tweet["created_at"]))
-                    parent["retweets"].append((extracted_tweet["user_id"],extracted_tweet["user_screen_name"]))
+                    parent["retweets"].append((extracted_tweet["user_id"],extracted_tweet["user_screen_name"],extracted_tweet["created_at"]))
+                    # parent["retweets"].append((extracted_tweet["user_id"],extracted_tweet["user_screen_name"]))
                     del display_tweets[extracted_tweet["id"]]
             
             # extract all users
             extracted_users = extract_display_users(tweet)
+            # since we're going backward in time, don't overwrite older data with newer
             users = {k:v for k,v in extracted_users.items() if k not in display_users}
             display_users.update(extracted_users)
             
             counter+=1
             if counter % BOX_SIZE == 0:
                 print("Processing tweet #"+str(counter))
-            # if counter > BOX_SIZE*10:
+            # if counter > BOX_SIZE*1:
             #     break
     
     # for id,tweet in display_tweets.items():
@@ -230,18 +258,29 @@ for filename in DATA_FILES:
     file_count = 0
     display_twids = {}
     for chunk in chunk_dictionary(display_tweets, BOX_SIZE):
-        print("Writing file",str(file_count)+"/"+str(int(len(display_tweets)/BOX_SIZE)))
+        print("Writing tweet file",str(file_count)+"/"+str(int(len(display_tweets)/BOX_SIZE)))
         print("  (",len(chunk),"tweets )")
-        tweets_fn = "disp_tw_"+"".join(filename.split(".")[:-1])+"-"+str(file_count).zfill(3)+".json"
-        with open("./output/"+tweets_fn, "w", encoding="UTF-8") as outfile:
+        users_fn = "disp_tw_"+"".join(filename.split(".")[:-1])+"-"+str(file_count).zfill(3)+".json"
+        with open("./output/"+users_fn, "w", encoding="UTF-8") as outfile:
             json.dump(chunk,outfile)
         for twid,tweet in chunk.items():
-            display_twids[twid] = tweets_fn
+            display_twids[twid] = users_fn
+        file_count+=1
+    
+    file_count = 0
+    display_userids = {}
+    for chunk in chunk_dictionary(display_users, BOX_SIZE):
+        print("Writing user file",str(file_count)+"/"+str(int(len(display_tweets)/BOX_SIZE)))
+        print("  (",len(chunk),"users )")
+        users_fn = "disp_u_"+"".join(filename.split(".")[:-1])+"-"+str(file_count).zfill(3)+".json"
+        with open("./output/"+users_fn, "w", encoding="UTF-8") as outfile:
+            json.dump(chunk,outfile)
+        for userid,user in chunk.items():
+            display_userids[userid] = users_fn
         file_count+=1
             
     with open("./output/disp_twids_"+filename, "w", encoding="UTF-8") as outfile:
         json.dump(display_twids,outfile)
 
-    users_fn = "disp_users_"+"".join(filename.split(".")[:-1])+".json"
-    with open("./output/"+users_fn, "w", encoding="UTF-8") as outfile:
-        json.dump(display_users,outfile)
+    with open("./output/disp_userids_"+filename, "w", encoding="UTF-8") as outfile:
+        json.dump(display_userids,outfile)
