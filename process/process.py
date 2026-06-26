@@ -75,17 +75,17 @@ USER_SCHEMA = {
         "id":["id_str"],
         "verified":["verified"],
         "followers_count":["followers_count"],
-        "statuses_count":["statuses_count"],
+        # "statuses_count":["statuses_count"],
         "description":["description"],
         "friends_count":["friends_count"],
         "location":["location"],
-        "utc_offset":["utc_offset"],
-        "time_zone":["time_zone"],
+        # "utc_offset":["utc_offset"],
+        # "time_zone":["time_zone"],
         "screen_name":["screen_name"],
-        "lang":["lang"], #user interface setting, deprecated in 1.1 but seemingly still available here
+        # "lang":["lang"], #user interface setting, deprecated in 1.1 but seemingly still available here
         "name":["name"],
-        "url":["url"],
-        "created_at":["created_at"]
+        # "url":["url"],
+        # "created_at":["created_at"]
 }
 
 '''
@@ -93,11 +93,11 @@ Follow the schema to extract a single display attribute
 '''
 def parse_attribute(source,twitter_element):
     for i in source:
-        if i in twitter_element and twitter_element[i]:
+        if i in twitter_element:
             twitter_element = twitter_element[i]
         else:
             return None
-    return str(twitter_element)
+    return twitter_element
 
 '''
 follow the schema to extract the attributes for a single display tweet
@@ -105,8 +105,9 @@ follow the schema to extract the attributes for a single display tweet
 def extract_display_tweet(tweet):
     display_tweet = {}
     for target, source in TWEET_SCHEMA.items():
-        if parse_attribute(source,tweet):
-            display_tweet[target] = parse_attribute(source,tweet)
+        att = parse_attribute(source,tweet)
+        if att:
+            display_tweet[target] = att
     return display_tweet
 
 '''
