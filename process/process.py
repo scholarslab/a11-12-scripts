@@ -85,7 +85,7 @@ USER_SCHEMA = {
         # "lang":["lang"], #user interface setting, deprecated in 1.1 but seemingly still available here
         "name":["name"],
         # "url":["url"],
-        # "created_at":["created_at"]
+        "created_at":["created_at"]
 }
 
 '''
@@ -274,7 +274,7 @@ for filename in DATA_FILES:
     
     # create sort lists
     with open("./output/sort_chrono_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:
-        json.dump(sorted(display_tweets.keys()),outfile)
+        json.dump([display_tweet["id"] for display_tweet in sorted(display_tweets.values(), key=lambda t: int(t.get("id",0)), reverse=False)],outfile)
     with open("./output/sort_favs_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:    
         json.dump([display_tweet["id"] for display_tweet in sorted(display_tweets.values(), key=lambda t: int(t.get("favorite_count",0)), reverse=True)],outfile)
     with open("./output/sort_retweets_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:
