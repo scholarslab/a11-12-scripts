@@ -26,8 +26,8 @@ from collections import Counter
 DATA_FILES = [
     # "charlottesville_0010.jsonl",
     # "charlottesville_0010000.jsonl"
-    "charlottesville_01000000.jsonl",
-    # "charlottesville_20170814.json"
+    # "charlottesville_01000000.jsonl",
+    "charlottesville_20170814.json"
 ]
 
 BOX_SIZE = 2000
@@ -197,6 +197,7 @@ Notes:
 display_tweets = {}
 display_users = {}
 retweets = defaultdict(str)
+quote_retweets = defaultdict(list)
 counter = 0
 
 retweets_count = Counter()
@@ -230,17 +231,17 @@ for filename in DATA_FILES:
             # remove retweets and append info to parent
             for extracted_tweet in extracted_tweets.values():
                 if "retweeted_status_id" in extracted_tweet:
-                    parent = display_tweets[extracted_tweet["retweeted_status_id"]]  
+                    parent = display_tweets[extracted_tweet["retweeted_status_id"]]
                     if "retweets" not in parent:
                         parent["retweets"] = []
                     parent["retweets"].append((extracted_tweet["user_id"],extracted_tweet["user_screen_name"],extracted_tweet["created_at"]))
                     # parent["retweets"].append((extracted_tweet["user_id"],extracted_tweet["user_screen_name"]))
                     del display_tweets[extracted_tweet["id"]]
+                elif "quoted_status_id" in extracted_tweet:
+                    quote_retweets[str(extracted_tweet["quoted_status_id"])].append(extracted_tweet["id"])
             
             # extract all users
             extracted_users = extract_display_users(tweet)
-            # since we're going backward in time, don't overwrite older data with newer
-            users = {k:v for k,v in extracted_users.items() if k not in display_users}
             display_users.update(extracted_users)
 
             counter+=1
@@ -252,10 +253,17 @@ for filename in DATA_FILES:
     # for id,tweet in display_tweets.items():
     #     if "retweets" in tweet:
     #         retweets_count[tweet["id"]] = len(tweet["retweets"])
-    
+
     # for twid,retweet_count in retweets_count.most_common(20):
     #     print(twid, retweet_count, "retweets")
-    
+
+    # append quote retweet info to parent tweets
+    for parent_id, qrt_ids in quote_retweets.items():
+        if parent_id in display_tweets:
+            parent = display_tweets[parent_id]
+            parent["quote_retweets"] = qrt_ids
+            parent["quote_retweet_count"] = len(qrt_ids)
+
     file_count = 0
     display_twids = {}
     for chunk in chunk_dictionary(display_tweets, BOX_SIZE):
