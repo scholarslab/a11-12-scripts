@@ -288,7 +288,7 @@ for filename in DATA_FILES:
     with open("./output/sort_retweets_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:
         json.dump([display_tweet["id"] for display_tweet in sorted(display_tweets.values(), key=lambda t: int(t.get("retweet_count",0)), reverse=True)],outfile)
     with open("./output/sort_followers_"+OUTPUT_FILENAME+".json", "w", encoding="UTF-8") as outfile:
-        json.dump([display_tweet["id"] for display_tweet in sorted(display_tweets.values(), key=lambda t: int(display_users[t["user_id"]]["followers_count"]), reverse=True)],outfile)
+        json.dump([display_tweet["id"] for display_tweet in sorted(display_tweets.values(), key=lambda t: (int(display_users[t["user_id"]]["followers_count"]), -int(t.get("created_at",0))), reverse=True)],outfile)
     
     file_count = 0
     display_userids = {}
